@@ -50,62 +50,14 @@ const unsigned long debounceDelay = 200;
 
 // Animation frame tracking
 unsigned long lastAnimationUpdate = 0;
-const unsigned long animationInterval = 150; // 150ms per frame
+const unsigned long animationInterval = 500; // 500ms per frame (heartbeat rhythm)
 int animationFrame = 0;
 
 // ============== LED MATRIX ANIMATIONS ==============
 
-// SPINNING SQUARE - 4 frames
-uint8_t spinningSquareFrames[4][8] = {
-  // Frame 1 - Top-left to bottom-right diagonal
-  {
-    0b10000001,
-    0b01000010,
-    0b00100100,
-    0b00011000,
-    0b00100100,
-    0b01000010,
-    0b10000001,
-    0b00000000
-  },
-  // Frame 2 - Rotated 90 degrees
-  {
-    0b00000001,
-    0b00000011,
-    0b00000111,
-    0b11111111,
-    0b11111110,
-    0b11111100,
-    0b10000000,
-    0b00000000
-  },
-  // Frame 3 - Rotated 180 degrees
-  {
-    0b00000000,
-    0b10000001,
-    0b01000010,
-    0b00100100,
-    0b00011000,
-    0b00100100,
-    0b01000010,
-    0b10000001
-  },
-  // Frame 4 - Rotated 270 degrees
-  {
-    0b00000010,
-    0b00000110,
-    0b00001110,
-    0b11111111,
-    0b01111111,
-    0b00111111,
-    0b00000001,
-    0b00000000
-  }
-};
-
-// PULSING HEART - 4 frames (grows and shrinks)
-uint8_t pulsingHeartFrames[4][8] = {
-  // Frame 1 - Small heart
+// PULSING HEART - 2 frames (shrunk and expanded like a real heartbeat)
+uint8_t pulsingHeartFrames[2][8] = {
+  // Frame 1 - Shrunk/relaxed
   {
     0b00000000,
     0b00011000,
@@ -116,18 +68,7 @@ uint8_t pulsingHeartFrames[4][8] = {
     0b00001000,
     0b00000000
   },
-  // Frame 2 - Medium heart
-  {
-    0b00000000,
-    0b00111100,
-    0b01111110,
-    0b01111110,
-    0b01111110,
-    0b00111100,
-    0b00011000,
-    0b00000000
-  },
-  // Frame 3 - Large heart
+  // Frame 2 - Expanded/pumping
   {
     0b01100110,
     0b11111111,
@@ -137,87 +78,6 @@ uint8_t pulsingHeartFrames[4][8] = {
     0b00111100,
     0b00011000,
     0b00000000
-  },
-  // Frame 4 - Medium heart (shrinking back)
-  {
-    0b00000000,
-    0b00111100,
-    0b01111110,
-    0b01111110,
-    0b01111110,
-    0b00111100,
-    0b00011000,
-    0b00000000
-  }
-};
-
-// DANCING BARS (Equalizer) - 6 frames
-uint8_t dancingBarsFrames[6][8] = {
-  // Frame 1
-  {
-    0b10001000,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b11111111
-  },
-  // Frame 2
-  {
-    0b01000100,
-    0b01001010,
-    0b01101010,
-    0b01101010,
-    0b01101010,
-    0b01101010,
-    0b01101010,
-    0b11111111
-  },
-  // Frame 3
-  {
-    0b00100010,
-    0b00100101,
-    0b00110101,
-    0b00110101,
-    0b00110101,
-    0b00110101,
-    0b00110101,
-    0b11111111
-  },
-  // Frame 4
-  {
-    0b01000100,
-    0b01001010,
-    0b01101010,
-    0b01101010,
-    0b01101010,
-    0b01101010,
-    0b01101010,
-    0b11111111
-  },
-  // Frame 5
-  {
-    0b10001000,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b10101010,
-    0b11111111
-  },
-  // Frame 6
-  {
-    0b00100010,
-    0b00100101,
-    0b00110101,
-    0b00110101,
-    0b00110101,
-    0b00110101,
-    0b00110101,
-    0b11111111
   }
 };
 
@@ -243,6 +103,18 @@ uint8_t iconRocket[8] = {
   0b00111100,
   0b01100110,
   0b11000011
+};
+
+// Big filled square
+uint8_t iconSquare[8] = {
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111
 };
 
 // ============== SETUP ==============
@@ -321,17 +193,8 @@ void updateAnimationFrame() {
     
     // Update frame based on current icon
     if (currentIconIndex == 0) {
-      // Spinning square - 4 frames
-      animationFrame = (animationFrame + 1) % 4;
-    } else if (currentIconIndex == 1) {
-      // Pulsing heart - 4 frames
-      animationFrame = (animationFrame + 1) % 4;
-    } else if (currentIconIndex == 2) {
-      // Dancing bars - 6 frames
-      animationFrame = (animationFrame + 1) % 6;
-    } else {
-      // Static icons - no animation
-      animationFrame = 0;
+      // Pulsing heart - 2 frames
+      animationFrame = (animationFrame + 1) % 2;
     }
   }
 }
@@ -342,7 +205,7 @@ void handleTouchInputs() {
 
   // Check ICON touch button
   if (digitalRead(TOUCH_ICON) == HIGH) {
-    currentIconIndex = (currentIconIndex + 1) % 5;
+    currentIconIndex = (currentIconIndex + 1) % 4;
     animationFrame = 0; // Reset animation when changing icon
     lastTouchTime = millis();
     Serial.print("Icon changed to: ");
@@ -445,17 +308,14 @@ void updateLEDMatrix() {
 
   // Select which icon/animation to display
   if (currentIconIndex == 0) {
-    // Spinning square - animated
-    currentFrame = spinningSquareFrames[animationFrame];
+    // Pulsing heart - animated (2 frames)
+    currentFrame = pulsingHeartFrames[animationFrame];
   } else if (currentIconIndex == 1) {
     // Smiley face - static
     currentFrame = iconSmile;
   } else if (currentIconIndex == 2) {
-    // Pulsing heart - animated
-    currentFrame = pulsingHeartFrames[animationFrame];
-  } else if (currentIconIndex == 3) {
-    // Dancing bars - animated
-    currentFrame = dancingBarsFrames[animationFrame];
+    // Square - static
+    currentFrame = iconSquare;
   } else {
     // Rocket - static
     currentFrame = iconRocket;
