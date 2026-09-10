@@ -48,22 +48,180 @@ int currentDisplayMode = 0; // 0 = Clock, 1 = Weather
 unsigned long lastTouchTime = 0;
 const unsigned long debounceDelay = 200;
 
-// ============== LED MATRIX ICONS ==============
-// Icon patterns (8x8 arrays)
+// Animation frame tracking
+unsigned long lastAnimationUpdate = 0;
+const unsigned long animationInterval = 150; // 150ms per frame
+int animationFrame = 0;
 
-// Big filled square
-uint8_t iconSquare[8] = {
-  0b11111111,
-  0b11111111,
-  0b11111111,
-  0b11111111,
-  0b11111111,
-  0b11111111,
-  0b11111111,
-  0b11111111
+// ============== LED MATRIX ANIMATIONS ==============
+
+// SPINNING SQUARE - 4 frames
+uint8_t spinningSquareFrames[4][8] = {
+  // Frame 1 - Top-left to bottom-right diagonal
+  {
+    0b10000001,
+    0b01000010,
+    0b00100100,
+    0b00011000,
+    0b00100100,
+    0b01000010,
+    0b10000001,
+    0b00000000
+  },
+  // Frame 2 - Rotated 90 degrees
+  {
+    0b00000001,
+    0b00000011,
+    0b00000111,
+    0b11111111,
+    0b11111110,
+    0b11111100,
+    0b10000000,
+    0b00000000
+  },
+  // Frame 3 - Rotated 180 degrees
+  {
+    0b00000000,
+    0b10000001,
+    0b01000010,
+    0b00100100,
+    0b00011000,
+    0b00100100,
+    0b01000010,
+    0b10000001
+  },
+  // Frame 4 - Rotated 270 degrees
+  {
+    0b00000010,
+    0b00000110,
+    0b00001110,
+    0b11111111,
+    0b01111111,
+    0b00111111,
+    0b00000001,
+    0b00000000
+  }
 };
 
-// Smiley face
+// PULSING HEART - 4 frames (grows and shrinks)
+uint8_t pulsingHeartFrames[4][8] = {
+  // Frame 1 - Small heart
+  {
+    0b00000000,
+    0b00011000,
+    0b00111100,
+    0b00111100,
+    0b00111100,
+    0b00011000,
+    0b00001000,
+    0b00000000
+  },
+  // Frame 2 - Medium heart
+  {
+    0b00000000,
+    0b00111100,
+    0b01111110,
+    0b01111110,
+    0b01111110,
+    0b00111100,
+    0b00011000,
+    0b00000000
+  },
+  // Frame 3 - Large heart
+  {
+    0b01100110,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b01111110,
+    0b00111100,
+    0b00011000,
+    0b00000000
+  },
+  // Frame 4 - Medium heart (shrinking back)
+  {
+    0b00000000,
+    0b00111100,
+    0b01111110,
+    0b01111110,
+    0b01111110,
+    0b00111100,
+    0b00011000,
+    0b00000000
+  }
+};
+
+// DANCING BARS (Equalizer) - 6 frames
+uint8_t dancingBarsFrames[6][8] = {
+  // Frame 1
+  {
+    0b10001000,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b11111111
+  },
+  // Frame 2
+  {
+    0b01000100,
+    0b01001010,
+    0b01101010,
+    0b01101010,
+    0b01101010,
+    0b01101010,
+    0b01101010,
+    0b11111111
+  },
+  // Frame 3
+  {
+    0b00100010,
+    0b00100101,
+    0b00110101,
+    0b00110101,
+    0b00110101,
+    0b00110101,
+    0b00110101,
+    0b11111111
+  },
+  // Frame 4
+  {
+    0b01000100,
+    0b01001010,
+    0b01101010,
+    0b01101010,
+    0b01101010,
+    0b01101010,
+    0b01101010,
+    0b11111111
+  },
+  // Frame 5
+  {
+    0b10001000,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b10101010,
+    0b11111111
+  },
+  // Frame 6
+  {
+    0b00100010,
+    0b00100101,
+    0b00110101,
+    0b00110101,
+    0b00110101,
+    0b00110101,
+    0b00110101,
+    0b11111111
+  }
+};
+
+// Smiley face (static)
 uint8_t iconSmile[8] = {
   0b00111100,
   0b01000010,
@@ -75,31 +233,7 @@ uint8_t iconSmile[8] = {
   0b00111100
 };
 
-// Heart shape
-uint8_t iconHeart[8] = {
-  0b01100110,
-  0b11111111,
-  0b11111111,
-  0b11111111,
-  0b01111110,
-  0b00111100,
-  0b00011000,
-  0b00000000
-};
-
-// Music notes
-uint8_t iconMusic[8] = {
-  0b00011000,
-  0b00011000,
-  0b00011000,
-  0b10011000,
-  0b10011000,
-  0b10111100,
-  0b01111100,
-  0b00000000
-};
-
-// Rocket
+// Rocket (static)
 uint8_t iconRocket[8] = {
   0b00011000,
   0b00111100,
@@ -110,9 +244,6 @@ uint8_t iconRocket[8] = {
   0b01100110,
   0b11000011
 };
-
-uint8_t* icons[5] = {iconSquare, iconSmile, iconHeart, iconMusic, iconRocket};
-const int numIcons = 5;
 
 // ============== SETUP ==============
 void setup() {
@@ -173,11 +304,36 @@ void loop() {
     fetchWeather();
   }
 
+  // Update animation frames
+  updateAnimationFrame();
+
   // Update displays
   updateOLED();
   updateLEDMatrix();
 
-  delay(100);
+  delay(50);
+}
+
+// ============== ANIMATION FRAME UPDATE ==============
+void updateAnimationFrame() {
+  if (millis() - lastAnimationUpdate > animationInterval) {
+    lastAnimationUpdate = millis();
+    
+    // Update frame based on current icon
+    if (currentIconIndex == 0) {
+      // Spinning square - 4 frames
+      animationFrame = (animationFrame + 1) % 4;
+    } else if (currentIconIndex == 1) {
+      // Pulsing heart - 4 frames
+      animationFrame = (animationFrame + 1) % 4;
+    } else if (currentIconIndex == 2) {
+      // Dancing bars - 6 frames
+      animationFrame = (animationFrame + 1) % 6;
+    } else {
+      // Static icons - no animation
+      animationFrame = 0;
+    }
+  }
 }
 
 // ============== TOUCH INPUT HANDLER ==============
@@ -186,7 +342,8 @@ void handleTouchInputs() {
 
   // Check ICON touch button
   if (digitalRead(TOUCH_ICON) == HIGH) {
-    currentIconIndex = (currentIconIndex + 1) % numIcons;
+    currentIconIndex = (currentIconIndex + 1) % 5;
+    animationFrame = 0; // Reset animation when changing icon
     lastTouchTime = millis();
     Serial.print("Icon changed to: ");
     Serial.println(currentIconIndex);
@@ -284,10 +441,30 @@ void displayWeather() {
 void updateLEDMatrix() {
   mx.clear();
 
-  // Display current icon
+  uint8_t* currentFrame;
+
+  // Select which icon/animation to display
+  if (currentIconIndex == 0) {
+    // Spinning square - animated
+    currentFrame = spinningSquareFrames[animationFrame];
+  } else if (currentIconIndex == 1) {
+    // Smiley face - static
+    currentFrame = iconSmile;
+  } else if (currentIconIndex == 2) {
+    // Pulsing heart - animated
+    currentFrame = pulsingHeartFrames[animationFrame];
+  } else if (currentIconIndex == 3) {
+    // Dancing bars - animated
+    currentFrame = dancingBarsFrames[animationFrame];
+  } else {
+    // Rocket - static
+    currentFrame = iconRocket;
+  }
+
+  // Display the frame on the matrix
   for (int row = 0; row < 8; row++) {
     for (int col = 0; col < 8; col++) {
-      if (icons[currentIconIndex][row] & (1 << (7 - col))) {
+      if (currentFrame[row] & (1 << (7 - col))) {
         mx.setPoint(row, col, true);
       }
     }
